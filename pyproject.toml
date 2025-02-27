@@ -12,3 +12,4 @@ myapp = "my_python_project.main:main"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/my_python_project"]
+
