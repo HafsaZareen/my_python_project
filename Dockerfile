@@ -2,7 +2,9 @@ FROM python:3.9-slim
 
 WORKDIR /app
 
-COPY dist/*.whl .
-RUN pip install *.whl
+# Explicitly define path
+COPY ./dist/*.whl /app/ 
 
-CMD ["myapp"]
+RUN pip install /app/*.whl
+
+CMD ["python", "-m", "my_python_project.main"]
