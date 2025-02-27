@@ -13,14 +13,17 @@ pipeline {
             }
         }
 
-        stage('Setup Virtual Environment') {
-            steps {
-                sh '''
-                python3 -m venv $VENV_PATH  
-                bash -c "source $VENV_PATH/bin/activate && pip install --upgrade pip"
-                '''
-            }
-        }
+     stage('Setup Virtual Environment') {
+    steps {
+        sh '''
+        rm -rf $VENV_PATH  # Delete old venv to avoid permission issues
+        python3 -m venv $VENV_PATH  # Recreate venv with Jenkins user
+        chmod -R 755 $VENV_PATH  # Ensure venv is executable
+        bash -c "source $VENV_PATH/bin/activate && pip install --upgrade pip"
+        '''
+    }
+}
+
 
         stage('Build Python Package') {
             steps {
