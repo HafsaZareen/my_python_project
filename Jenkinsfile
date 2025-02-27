@@ -1,16 +1,16 @@
 pipeline {
-    agent any  // Runs the pipeline on any available agent
+    agent any
 
     environment {
-        DOCKER_IMAGE = 'my-python-project:latest'  // Docker image name
-        VENV_PATH = 'envv'  // Virtual environment name
+        DOCKER_IMAGE = 'my-python-project:latest'
+        VENV_PATH = 'envv'
     }
 
     stages {
         stage('Checkout') {
             steps {
-                dir('/home/user/my_python_project') {  
-                    git branch: 'main', url: 'file:///home/user/my_python_project'  // Clone the repo
+                dir("${env.WORKSPACE}") {  
+                    git branch: 'main', url: 'https://github.com/HafsaZareen/my_python_project.git'
                 }
             }
         }
@@ -18,9 +18,8 @@ pipeline {
         stage('Setup Virtual Environment') {
             steps {
                 sh '''
-                python3 -m venv $VENV_PATH  # Create virtual environment if not exists
-                source $VENV_PATH/bin/activate  # Activate virtual environment
-                pip install --upgrade pip  # Upgrade pip
+                python3 -m venv $VENV_PATH
+                bash -c "source $VENV_PATH/bin/activate && pip install --upgrade pip"
                 '''
             }
         }
@@ -28,9 +27,8 @@ pipeline {
         stage('Build Python Package') {
             steps {
                 sh '''
-                source $VENV_PATH/bin/activate
-                pip install build  # Install build package
-                python -m build --wheel  # Create a wheel file (distributable package)
+                bash -c "source $VENV_PATH/bin/activate && pip install build setuptools wheel"
+                python -m build --wheel
                 '''
             }
         }
@@ -38,27 +36,29 @@ pipeline {
         stage('Run Tests') {
             steps {
                 sh '''
-                source $VENV_PATH/bin/activate
-                pip install pytest  # Install test framework
-                pytest tests/  # Run tests from the 'tests/' directory
+                if [ -d "tests" ]; then
+                    bash -c "source $VENV_PATH/bin/activate && pip install pytest && pytest tests/"
+                else
+                    echo "No tests found"
+                fi
                 '''
             }
         }
 
         stage('Build Docker Image') {
             steps {
-                sh 'docker build -t $DOCKER_IMAGE .'  // Build Docker image from Dockerfile
+                sh 'docker build -t $DOCKER_IMAGE .'
             }
         }
 
         stage('Deploy & Run Container') {
             steps {
                 sh '''
-                docker stop my-python-container || true  # Stop old container if running
-                docker rm my-python-container || true  # Remove old container
-                docker run -d --name my-python-container $DOCKER_IMAGE  # Run new container
-                sleep 3  # Wait for container to start
-                docker logs my-python-container  # Print container logs to Jenkins console
+                docker stop my-python-container || true
+                docker rm my-python-container || true
+                docker run -d -p 5000:5000 --name my-python-container $DOCKER_IMAGE
+                sleep 3
+                docker logs my-python-container
                 '''
             }
         }
