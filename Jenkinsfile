@@ -1,55 +1,49 @@
 pipeline {
     agent any
-   
-    environment {
-        DOCKER_IMAGE = 'my-python-project:latest'
-    }
-   
     stages {
-        stage('Checkout') {
+        stage('Clone Repository') {
             steps {
-                // For local Git repo (adjust path if needed)
-                dir('/home/user/my_python_project') {
-                    git branch: 'main', url: 'file:///home/user/my_python_project'
-                }
+                cleanWs()
+                sh 'echo Current directory: $(pwd)'
+                sh '[ -d my_python_project ] || git clone https://github.com/HafsaZareen/my_python_project.git'
+                echo 'Repository cloned successfully!'
             }
         }
-       
-        stage('Build Wheel') {
+
+        stage('Verify Clone') {
             steps {
-                sh 'pip install build'
-                sh 'python -m build --wheel'
+                sh 'cd my_python_project && ls -la && git status'
+                echo 'Repository cloned successfully to workspace!'
             }
         }
-       
-        stage('Test') {
+
+        stage('Build & Test') {
             steps {
-                sh 'pip install pytest'
-                sh 'pytest tests/'
+                sh '''
+                cd my_python_project
+                python -m venv venv
+                source venv/bin/activate
+                pip install -r requirements.txt
+                python -m unittest discover tests
+                '''
             }
         }
-       
+
         stage('Build Docker Image') {
             steps {
-                sh 'docker build -t  .'
-            }
-        }
-       
-        stage('Deploy') {
-            steps {
-                sh 'docker stop my-python-container || true'
-                sh 'docker rm my-python-container || true'
-                sh 'docker run -d --name my-python-container '
+                sh '''
+                cd my_python_project
+                docker build -t my_python_project .
+                '''
             }
         }
     }
-   
     post {
         success {
-            echo 'Pipeline completed successfully!'
+            echo 'Build & Tests Successful!'
         }
         failure {
-            echo 'Pipeline failed!'
+            echo 'Build or Tests Failed!'
         }
     }
 }
